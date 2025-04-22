@@ -133,7 +133,7 @@ def webhook():
         abort(403)
 
 @app.route('/set_webhook', methods=['GET', 'POST'])
-def set_webhook():
+def set_webhook_route():
     webhook_url = request.args.get('url')
     if webhook_url:
         bot.set_webhook(url=webhook_url)
@@ -146,6 +146,19 @@ def delete_webhook_route():
     bot.delete_webhook()
     return 'Webhook deleted', 200
 
+def set_telegram_webhook(webhook_url, bot_token):
+    url = f"https://api.telegram.org/bot{bot_token}/setWebhook?url={webhook_url}"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Kor u qaad khalad haddii codsigu xumaado
+        result = response.json()
+        if result.get('ok'):
+            print(f"Webhook successfully set to: {webhook_url}")
+        else:
+            print(f"Failed to set webhook: {result}")
+    except requests.exceptions.RequestException as e:
+        print(f"Error setting webhook: {e}")
+
 if __name__ == "__main__":
     # Hubi in DOWNLOAD_DIR la tirtiro marka la bilaabo (ikhtiyaari)
     if os.path.exists(DOWNLOAD_DIR):
@@ -155,6 +168,11 @@ if __name__ == "__main__":
     # Ka saar webhook-kii hore haddii uu jiro
     bot.delete_webhook()
 
+    # Deji webhook-ka marka app-ka la bilaabo
+    WEBHOOK_URL = "https://bot-media-transcriber-i923.onrender.com/"
+    set_telegram_webhook(WEBHOOK_URL, TOKEN)
+
     # Bilow app-ka Flask
     app.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
+
 
