@@ -90,16 +90,14 @@ def start_handler(message):
         first_name = message.from_user.first_name or "there"
         username = f"@{message.from_user.username}" if message.from_user.username else first_name
         text = (
-            f"👋 Salam {username}\n• Please send me any of the following:
-
-• Voice message 🎤
-• Video message 🎥
-• Audio file 🎵
-• Video file 📹
-• TikTok video URL
-• YouTube Shorts URL
-
-I will automatically detect the language and convert the content into text, then send it back to you as quickly as possible 👌🏻"
+            f"👋 Salam {username}\n• Please send me any of the following:\n\n"
+            f"• Voice message 🎤\n"
+            f"• Video message 🎥\n"
+            f"• Audio file 🎵\n"
+            f"• Video file 📹\n"
+            f"• TikTok video URL\n"
+            f"• YouTube Shorts URL\n\n"
+            f"I will automatically detect the language and convert the content into text, then send it back to you as quickly as possible 👌🏻"
         )
         bot.send_message(message.chat.id, text)
 
@@ -308,3 +306,4 @@ if __name__ == "__main__":
     WEBHOOK_URL = "https://bot-media-transcriber.onrender.com/"
     set_telegram_webhook(WEBHOOK_URL, TOKEN)
     app.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
+
