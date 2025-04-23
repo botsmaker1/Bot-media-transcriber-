@@ -15,7 +15,7 @@ from faster_whisper import WhisperModel
 logging.basicConfig(level=logging.INFO)
 
 # ENV variables
-TOKEN = os.environ.get("7920977306:AAFRR5ZIaPcD1rbmjSKxsNisQZZpPa7zWPs")
+TOKEN = os.environ.get"7920977306:AAFRR5ZIaPcD1rbmjSKxsNisQZZpPa7zWPs"
 WEBHOOK_URL = os.environ.get("https://bot-media-transcriber.onrender.com")
 
 bot = telebot.TeleBot(TOKEN)
