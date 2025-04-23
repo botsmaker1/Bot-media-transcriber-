@@ -1,5 +1,3 @@
-
-
 import re
 import uuid
 import os
@@ -95,8 +93,8 @@ def start_handler(message):
             f"👋 Salam {username}\n• Please send me one of these file types:\n"
             "• Voice message 🎤\n• Video message 🎥\n"
             "• Audio file 🎵\n• Video file 📹\n\n"
-             “I will convert it into text using auto-detection of the language, and I will send it to you as quickly as possible.
-100% free of charge 👌🏻"
+             "I will convert it into text using auto-detection of the language, and I will send it to you as quickly as possible.\n"
+            "100% free of charge 👌🏻"
         )
         bot.send_message(message.chat.id, text)
 
@@ -305,9 +303,3 @@ if __name__ == "__main__":
     WEBHOOK_URL = "https://bot-media-transcriber.onrender.com/"
     set_telegram_webhook(WEBHOOK_URL, TOKEN)
     app.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
-
-
-
-
-
-
