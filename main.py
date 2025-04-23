@@ -8,6 +8,7 @@ from faster_whisper import WhisperModel
 import requests
 from flask import Flask, request, abort
 import logging
+import json
 
 # Configure logger
 logging.basicConfig(level=logging.INFO)
@@ -22,20 +23,29 @@ REQUIRED_CHANNEL = "@qolkaqarxiska2"
 # Initialize Flask app
 app = Flask(__name__)
 
-# User tracking
-existing_users = set()
-if os.path.exists('users.txt'):
-    with open('users.txt', 'r') as f:
-        for line in f:
-            existing_users.add(line.strip())
+# User language preferences
+user_languages = {}
+if os.path.exists('user_languages.json'):
+    with open('user_languages.json', 'r') as f:
+        try:
+            user_languages = json.load(f)
+        except json.JSONDecodeError:
+            user_languages = {}
 
-# Admin configuration
-ADMIN_ID = 5240873494
-admin_state = {}
+def save_user_languages():
+    with open('user_languages.json', 'w') as f:
+        json.dump(user_languages, f)
 
-# File download directory
-DOWNLOAD_DIR = "downloads"
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+# Available languages with flag emojis
+LANGUAGES = {
+    "en": "English 🇬🇧",
+    "tr": "Turkish 🇹🇷",
+    "es": "Spanish 🇪🇸",
+    "uz": "Uzbek 🇺🇿",
+    "ru": "Russian 🇷🇺",
+    "hi": "Hindi 🇮🇳",
+    "auto": "🧠 Auto Detect"
+}
 
 # Whisper model
 model = WhisperModel(
@@ -53,10 +63,10 @@ def check_subscription(user_id):
         return False
 
 def send_subscription_message(chat_id):
-    message = f"⚠️ Please join {REQUIRED_CHANNEL} to use this bot!\n\nJoin the channel and try again."
+    message = f"⚠️ Fadlan ku biir {REQUIRED_CHANNEL} si aad u isticmaasho bot-kan!\n\nKu biir channel-ka kadibna isku day mar kale."
     markup = telebot.types.InlineKeyboardMarkup()
     markup.add(telebot.types.InlineKeyboardButton(
-        text="Join Channel",
+        text="Ku Biir Channel-ka",
         url=f"https://t.me/{REQUIRED_CHANNEL[1:]}"
     ))
     bot.send_message(chat_id, message, reply_markup=markup)
@@ -67,56 +77,50 @@ def start_handler(message):
         return send_subscription_message(message.chat.id)
 
     user_id = str(message.from_user.id)
-    if user_id not in existing_users:
-        existing_users.add(user_id)
-        with open('users.txt', 'a') as f:
-            f.write(f"{user_id}\n")
+    if user_id not in user_languages:
+        user_languages[user_id] = "auto"  # Default to auto-detect
+        save_user_languages()
 
-    if message.from_user.id == ADMIN_ID:
-        markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-        markup.add("Send Ads (Broadcast)", "Total Users")
-        bot.send_message(message.chat.id, "Admin Panel", reply_markup=markup)
+    first_name = message.from_user.first_name or "there"
+    username = f"@{message.from_user.username}" if message.from_user.username else first_name
+    text = (
+        f"👋 Salaam {username}\n• Fadlan ii soo dir mid ka mid ah noocyada faylalka soo socda:\n"
+        "• Farriin cod ah 🎤\n• Farriin muuqaal ah 🎥\n"
+        "• Fayl maqal ah 🎵\n• Fayl muuqaal ah 📹\n\n"
+        "Waan kuu qori doonaa qoraal!"
+    )
+    bot.send_message(message.chat.id, text)
+
+@bot.message_handler(commands=['language'])
+def language_handler(message):
+    markup = telebot.types.InlineKeyboardMarkup(row_width=3)
+    buttons = [telebot.types.InlineKeyboardButton(text=lang_name, callback_data=f"set_lang:{lang_code}")
+               for lang_code, lang_name in LANGUAGES.items()]
+    markup.add(*buttons)
+    bot.send_message(message.chat.id, "Fadlan dooro luqadda aad rabto:", reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('set_lang:'))
+def set_language_callback(call):
+    user_id = str(call.from_user.id)
+    lang_code = call.data.split(':')[1]
+    user_languages[user_id] = lang_code
+    save_user_languages()
+    if lang_code == "auto":
+        bot.answer_callback_query(call.id, "Luqadda si toos ah ayaa loo ogaan doonaa.")
+        bot.send_message(call.message.chat.id, "Luqadda si toos ah ayaa loo ogaan doonaa.")
     else:
-        first_name = message.from_user.first_name or "there"
-        username = f"@{message.from_user.username}" if message.from_user.username else first_name
-        text = (
-            f"👋 Salam {username}\n• Please send me one of these file types:\n"
-            "• Voice message 🎤\n• Video message 🎥\n"
-            "• Audio file 🎵\n• Video file 📹\n\n"
-            "I'll transcribe it to text!"
-        )
-        bot.send_message(message.chat.id, text)
-
-@bot.message_handler(func=lambda msg: msg.text == "Total Users" and msg.from_user.id == ADMIN_ID)
-def show_total_users(message):
-    bot.send_message(message.chat.id, f"Total users: {len(existing_users)}")
-
-@bot.message_handler(func=lambda msg: msg.text == "Send Ads (Broadcast)" and msg.from_user.id == ADMIN_ID)
-def start_broadcast(message):
-    admin_state[message.from_user.id] = 'awaiting_broadcast'
-    bot.send_message(message.chat.id, "Send the message you want to broadcast:")
-
-@bot.message_handler(func=lambda msg: msg.from_user.id == ADMIN_ID and admin_state.get(msg.from_user.id) == 'awaiting_broadcast',
-                    content_types=['text', 'photo', 'video', 'audio', 'document', 'voice', 'sticker'])
-def handle_broadcast(message):
-    admin_state[message.from_user.id] = None
-    success = 0
-    failures = 0
-
-    for user_id in existing_users:
-        try:
-            bot.copy_message(user_id, message.chat.id, message.message_id)
-            success += 1
-        except Exception as e:
-            logging.error(f"Failed to send to {user_id}: {e}")
-            failures += 1
-
-    bot.send_message(message.chat.id, f"Broadcast complete!\nSuccess: {success}\nFailures: {failures}")
+        language_name = LANGUAGES.get(lang_code, "Unknown")
+        bot.answer_callback_query(call.id, f"Luqaddaada waxaa loo dejiyay: {language_name}")
+        bot.send_message(call.message.chat.id, f"Luqaddaada waxaa loo dejiyay: {language_name}")
 
 @bot.message_handler(content_types=['voice', 'video_note', 'audio', 'video'])
 def handle_audio_message(message):
     if not check_subscription(message.from_user.id):
         return send_subscription_message(message.chat.id)
+
+    user_id = str(message.from_user.id)
+    preferred_language = user_languages.get(user_id, "auto")
+    transcribe_language = None if preferred_language == "auto" else preferred_language
 
     file_path = None
     try:
@@ -136,7 +140,7 @@ def handle_audio_message(message):
             new_file.write(downloaded_file)
 
         bot.send_chat_action(message.chat.id, 'typing')
-        transcription = transcribe_audio(file_path)
+        transcription = transcribe_audio(file_path, language=transcribe_language)
         if transcription:
             if len(transcription) > 4000:
                 with open("transcription.txt", "w") as f:
@@ -147,10 +151,10 @@ def handle_audio_message(message):
             else:
                 bot.reply_to(message, transcription)
         else:
-            bot.send_message(message.chat.id, "Could not transcribe the audio.")
+            bot.send_message(message.chat.id, "Ma awoodin inaan qoro codka.")
 
     except Exception as e:
-        bot.send_message(message.chat.id, f"Error: {e}")
+        bot.send_message(message.chat.id, f"Khalad: {e}")
     finally:
         if file_path and os.path.exists(file_path):
             os.remove(file_path)
@@ -161,18 +165,18 @@ def handle_other_messages(message):
         return send_subscription_message(message.chat.id)
     bot.send_message(
         message.chat.id,
-        " sorry Please send me one of these file types:\n"
-        "• Voice message 🎤\n• Video message 🎥\n"
-        "• Audio file 🎵\n• Video file 📹\n\n"
-        "I'll transcribe it to text!"
+        " sorry Fadlan ii soo dir mid ka mid ah noocyada faylalka soo socda:\n"
+        "• Farriin cod ah 🎤\n• Farriin muuqaal ah 🎥\n"
+        "• Fayl maqal ah 🎵\n• Fayl muuqaal ah 📹\n\n"
+        "Waan kuu qori doonaa qoraal!"
     )
 
-def transcribe_audio(file_path: str) -> str | None:
+def transcribe_audio(file_path: str, language: str = None) -> str | None:
     try:
-        segments, _ = model.transcribe(file_path, beam_size=1)
+        segments, _ = model.transcribe(file_path, beam_size=1, language=language)
         return " ".join(segment.text for segment in segments)
     except Exception as e:
-        logging.error(f"Error during transcription of {file_path}: {e}")
+        logging.error(f"Khalad ku yimid qoraalka faylka {file_path}: {e}")
         return None
 
 @app.route('/', methods=['POST'])
@@ -190,28 +194,28 @@ def set_webhook_route():
     webhook_url = request.args.get('url')
     if webhook_url:
         bot.set_webhook(url=webhook_url)
-        return f'Webhook set to: {webhook_url}', 200
+        return f'Webhook waxaa lagu dejiyay: {webhook_url}', 200
     else:
-        return 'Please provide a webhook URL as a query parameter.', 400
+        return 'Fadlan ku dar URL-ka webhook-kaaga query parameter ahaan.', 400
 
 @app.route('/delete_webhook', methods=['GET', 'POST'])
 def delete_webhook_route():
     bot.delete_webhook()
-    return 'Webhook deleted', 200
+    return 'Webhook waa la tirtiray', 200
 
 def set_telegram_webhook(webhook_url, bot_token):
-    """Sets the Telegram bot webhook."""
+    """Wuxuu dejiyaa webhook-ka Telegram bot."""
     url = f"https://api.telegram.org/bot{bot_token}/setWebhook?url={webhook_url}"
     try:
         response = requests.get(url)
-        response.raise_for_status()  # Raise an exception for bad status codes
+        response.raise_for_status()  # Wuxuu soo saaraa exception haddii status code uu xumaado
         result = response.json()
         if result.get('ok'):
-            print(f"Webhook successfully set to: {webhook_url}")
+            print(f"Webhook si guul leh ayaa loo dejiyay: {webhook_url}")
         else:
-            print(f"Failed to set webhook: {result}")
+            print(f"Wuu ku guuldareystay dejinta webhook-ka: {result}")
     except requests.exceptions.RequestException as e:
-        print(f"Error setting webhook: {e}")
+        print(f"Khalad ku yimid dejinta webhook-ka: {e}")
 
 if __name__ == "__main__":
     if os.path.exists(DOWNLOAD_DIR):
@@ -221,7 +225,8 @@ if __name__ == "__main__":
     bot.delete_webhook()
     WEBHOOK_URL = "https://bot-media-transcriber-i923.onrender.com/"
     set_telegram_webhook(WEBHOOK_URL, TOKEN)
-    app.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
+    app.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080))
+
 
 
 
