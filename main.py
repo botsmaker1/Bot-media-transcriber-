@@ -90,11 +90,16 @@ def start_handler(message):
         first_name = message.from_user.first_name or "there"
         username = f"@{message.from_user.username}" if message.from_user.username else first_name
         text = (
-            f"👋 Salam {username}\n• Please send me one of these file types:\n"
-            "• Voice message 🎤\n• Video message 🎥\n"
-            "• Audio file 🎵\n• Video file 📹\n\n"
-             "I will convert it into text using auto-detection of the language, and I will send it to you as quickly as possible.\n"
-            "100% free of charge 👌🏻"
+            f"👋 Salam {username}\n• Please send me any of the following:
+
+• Voice message 🎤
+• Video message 🎥
+• Audio file 🎵
+• Video file 📹
+• TikTok video URL
+• YouTube Shorts URL
+
+I will automatically detect the language and convert the content into text, then send it back to you as quickly as possible 👌🏻"
         )
         bot.send_message(message.chat.id, text)
 
