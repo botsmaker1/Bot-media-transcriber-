@@ -1,3 +1,5 @@
+
+
 import re
 import uuid
 import os
@@ -13,42 +15,34 @@ import yt_dlp
 # Configure logger
 logging.basicConfig(level=logging.INFO)
 
-# Replace with your actual token
 TOKEN = "7920977306:AAFRR5ZIaPcD1rbmjSKxsNisQZZpPa7zWPs"
 bot = telebot.TeleBot(TOKEN)
 
-# Replace with your channel
 REQUIRED_CHANNEL = "@qolkaqarxiska2"
 
-# Initialize Flask app
 app = Flask(__name__)
 
-# User tracking
 existing_users = set()
 if os.path.exists('users.txt'):
     with open('users.txt', 'r') as f:
         for line in f:
             existing_users.add(line.strip())
 
-# Admin configuration
 ADMIN_ID = 5240873494
 admin_state = {}
 
-# File download directory
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-# File size limit (50MB in bytes)
 FILE_SIZE_LIMIT = 50 * 1024 * 1024
 
-# Whisper model
+# Wax ka beddel halkan lagu sameeyay: tiny -> small
 model = WhisperModel(
-    model_size_or_path="tiny",
+    model_size_or_path="small",
     device="cpu",
     compute_type="int8"
 )
 
-# Regex for YouTube watch URLs, YouTube Shorts & TikTok URLs
 URL_PATTERN = re.compile(
     r'(https?://(?:www\.)?'
     r'(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/shorts/|vm\.tiktok\.com/|tiktok\.com/)[^\s]+)'
@@ -197,7 +191,6 @@ def handle_video_url(message):
 
     bot.send_chat_action(message.chat.id, 'typing')
     try:
-        # Download video from YouTube or TikTok
         ydl_opts = {
             'format': 'best',
             'outtmpl': out_path,
@@ -215,7 +208,6 @@ def handle_video_url(message):
                 return
             ydl.download([url])
 
-        # Transcribe the downloaded video
         transcription = transcribe_audio(out_path)
         if transcription:
             if len(transcription) > 2000:
@@ -245,10 +237,10 @@ def handle_other_messages(message):
         return send_subscription_message(message.chat.id)
     bot.send_message(
         message.chat.id,
-        " sorry Please send me one of these file types:\n"
+        "Sorry, please send me one of these file types:\n"
         "• Voice message 🎤\n• Video message 🎥\n"
-        "• Audio file 🎵\n• Video file 📹 YouTube shorts video URL TikTok video URL \n\n"
-        "I'll transcribe it to text! "
+        "• Audio file 🎵\n• Video file 📹\nYouTube shorts video URL or TikTok video URL\n\n"
+        "I'll transcribe it to text!"
     )
 
 def transcribe_audio(file_path: str) -> str | None:
@@ -284,7 +276,6 @@ def delete_webhook_route():
     return 'Webhook deleted', 200
 
 def set_telegram_webhook(webhook_url, bot_token):
-    """Sets the Telegram bot webhook."""
     url = f"https://api.telegram.org/bot{bot_token}/setWebhook?url={webhook_url}"
     try:
         response = requests.get(url)
