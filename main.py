@@ -143,7 +143,7 @@ def handle_audio_message(message):
     if file_size and file_size > FILE_SIZE_LIMIT:
         bot.send_message(
             message.chat.id,
-            f"File size exceeds the limit of 50MB. Please send a smaller file."
+            f"⚠️ Sorry, the file is too large. Please send a file smaller than 20MB or use @Video_to_audio_robot to convert it to audio if it’s a video, or send the video in a lower resolution like 256p."
         )
         return
 
