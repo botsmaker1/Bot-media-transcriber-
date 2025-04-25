@@ -1,3 +1,4 @@
+
 import re
 import uuid
 import os
@@ -13,42 +14,33 @@ import yt_dlp
 # Configure logger
 logging.basicConfig(level=logging.INFO)
 
-# Replace with your actual token
 TOKEN = "7920977306:AAFRR5ZIaPcD1rbmjSKxsNisQZZpPa7zWPs"
 bot = telebot.TeleBot(TOKEN)
 
-# Replace with your channel
 REQUIRED_CHANNEL = "@qolkaqarxiska2"
 
-# Initialize Flask app
 app = Flask(__name__)
 
-# User tracking
 existing_users = set()
 if os.path.exists('users.txt'):
     with open('users.txt', 'r') as f:
         for line in f:
             existing_users.add(line.strip())
 
-# Admin configuration
 ADMIN_ID = 6964068910
 admin_state = {}
 
-# File download directory
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-# File size limit (20MB in bytes)
 FILE_SIZE_LIMIT = 20 * 1024 * 1024
 
-# Whisper model
 model = WhisperModel(
     model_size_or_path="tiny",
     device="cpu",
     compute_type="int8"
 )
 
-# Regex for YouTube watch URLs, YouTube Shorts & TikTok URLs
 URL_PATTERN = re.compile(
     r'(https?://(?:www\.)?'
     r'(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/shorts/|vm\.tiktok\.com/|tiktok\.com/)[^\s]+)'
@@ -143,7 +135,7 @@ def handle_audio_message(message):
     if file_size and file_size > FILE_SIZE_LIMIT:
         bot.send_message(
             message.chat.id,
-            f"⚠️ Sorry, the file is too large. Please send a file smaller than 20MB or use @Video_to_audio_robot to convert it to audio if it’s a video, or send the video in a lower resolution like 256p."
+            f"⚠️ Sorry, the file is too large. Please send a file smaller than 20MB."
         )
         return
 
@@ -195,25 +187,28 @@ def handle_video_url(message):
 
     bot.send_chat_action(message.chat.id, 'typing')
     try:
-        # Download video from YouTube or TikTok
         ydl_opts = {
             'format': 'best',
             'outtmpl': out_path,
             'quiet': True,
-            'progress_hooks': [lambda d: print(d['filename'], d['_percent_str']) if 'filename' in d else None],
+            'noplaylist': True,
             'max_filesize': FILE_SIZE_LIMIT,
         }
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=False)
-            if info_dict and 'filesize' in info_dict and info_dict['filesize'] > FILE_SIZE_LIMIT:
+
+            filesize = info_dict.get('filesize') or info_dict.get('filesize_approx')
+            if filesize and filesize > FILE_SIZE_LIMIT:
                 bot.send_message(
                     message.chat.id,
-                    f"Video size exceeds the limit of 50MB. Please provide a link to a smaller video."
+                    f"⚠️ Video-ka aad soo dirtay wuu weyn yahay "
+                    f"({round(filesize / (1024 * 1024), 2)} MB > 20 MB)."
                 )
                 return
+
             ydl.download([url])
 
-        # Transcribe the downloaded video
         transcription = transcribe_audio(out_path)
         if transcription:
             if len(transcription) > 2000:
@@ -228,8 +223,13 @@ def handle_video_url(message):
             bot.send_message(message.chat.id, "Ma awooday inaan qoraal ka sameeyo video-ga.")
 
     except yt_dlp.utils.DownloadError as e:
-        logging.error(f"Download error for URL {url}: {e}")
-        bot.send_message(message.chat.id, f"Waxaa dhacay qalad intii la soo dejiyay video-ga.")
+        error_msg = str(e)
+        logging.error(f"Download error for URL {url}: {error_msg}")
+        bot.send_message(
+            message.chat.id,
+            f"❌ Waxaa dhacay qalad intii la soo dejinayay video-ga:\n\n<b>{error_msg}</b>",
+            parse_mode="HTML"
+        )
     except Exception as e:
         logging.error(f"Error processing URL {url}: {e}")
         bot.send_message(message.chat.id, f"Wax khalad ah ayaa dhacay: {e}")
@@ -282,7 +282,6 @@ def delete_webhook_route():
     return 'Webhook deleted', 200
 
 def set_telegram_webhook(webhook_url, bot_token):
-    """Sets the Telegram bot webhook."""
     url = f"https://api.telegram.org/bot{bot_token}/setWebhook?url={webhook_url}"
     try:
         response = requests.get(url)
@@ -304,5 +303,6 @@ if __name__ == "__main__":
     WEBHOOK_URL = "https://bot-media-transcriber.onrender.com/"
     set_telegram_webhook(WEBHOOK_URL, TOKEN)
     app.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
+
 
 
