@@ -38,8 +38,8 @@ admin_state = {}
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-# File size limit (50MB in bytes)
-FILE_SIZE_LIMIT = 50 * 1024 * 1024
+# File size limit (20MB in bytes)
+FILE_SIZE_LIMIT = 20 * 1024 * 1024
 
 # Whisper model
 model = WhisperModel(
@@ -95,9 +95,7 @@ def start_handler(message):
             f"• Video message 🎥\n"
             f"• Audio file 🎵\n"
             f"• Video file 📹\n"
-            f"• TikTok video URL\n"
-            f"• YouTube Shorts URL\n\n"
-            f"I will automatically detect the language and convert the content into text, then send it back to you as quickly as possible 👌🏻"
+            f"• I am transcribing it and I will send it to you"
         )
         bot.send_message(message.chat.id, text)
 
@@ -247,7 +245,7 @@ def handle_other_messages(message):
         message.chat.id,
         " sorry Please send me one of these file types:\n"
         "• Voice message 🎤\n• Video message 🎥\n"
-        "• Audio file 🎵\n• Video file 📹 YouTube shorts video URL TikTok video URL \n\n"
+        "• Audio file 🎵\n• Video file 📹\n\n"
         "I'll transcribe it to text! "
     )
 
