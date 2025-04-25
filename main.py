@@ -31,7 +31,7 @@ if os.path.exists('users.txt'):
             existing_users.add(line.strip())
 
 # Admin configuration
-ADMIN_ID = 5240873494
+ADMIN_ID = 6964068910
 admin_state = {}
 
 # File download directory
