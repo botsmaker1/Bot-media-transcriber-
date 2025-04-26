@@ -17,7 +17,7 @@ TOKEN = "7920977306:AAFRR5ZIaPcD1rbmjSKxsNisQZZpPa7zWPs"
 bot = telebot.TeleBot(TOKEN)
 
 # Replace with your channel
-REQUIRED_CHANNEL = "@qolkaqarxiska2"
+REQUIRED_CHANNEL = "@mediatranscriber"
 
 # Initialize Flask app
 app = Flask(__name__)
